@@ -1,0 +1,430 @@
+# **Librerías**
+"""
+
+import sqlalchemy
+from sqlalchemy import create_engine
+from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey
+from sqlalchemy import inspect
+
+"""# **Crear la base de datos**"""
+
+import sqlite3
+conexion=sqlite3.connect("DW_Northwind_multdim2.db")
+
+"""# **Creación de las dimensiones y la tabla hechos**
+
+**dim_category**
+"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_category (
+    IdCategory  INTEGER       PRIMARY KEY AUTOINCREMENT NOT NULL,
+    CategoryName VARCHAR (8000),
+    Description  VARCHAR (8000) 
+)""")
+    print("se creo la tabla dim_category")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_category ya existe")
+
+"""**dim_supplier**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_supplier (
+    IdSupplier  INTEGER       PRIMARY KEY AUTOINCREMENT NOT NULL,
+    CompanyName  VARCHAR (8000),
+    ContactName  VARCHAR (8000),
+    ContactTitle VARCHAR (8000),
+    Address      VARCHAR (8000),
+    City         VARCHAR (8000),
+    Region       VARCHAR (8000),
+    PostalCode   VARCHAR (8000),
+    Country      VARCHAR (8000),
+    Phone        VARCHAR (8000)
+)""")
+    print("se creo la tabla dim_supplier")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_supplier ya existe")
+
+"""**dim_products**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_products (
+                      IdProduct INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                      IdCategory   INTEGER REFERENCES dim_category (IdCategory) NOT NULL,
+                      IdSupplier   INTEGER REFERENCES dim_supplier (IdSupplier) NOT NULL,
+                      ProductName     VARCHAR (8000),
+                      QuantityPerUnit VARCHAR (8000),
+                      UnitPrice       DECIMAL        NOT NULL,
+                      UnitsInStock    INTEGER        NOT NULL,
+                      UnitsOnOrder    INTEGER        NOT NULL,
+                      ReorderLevel    INTEGER        NOT NULL,
+                      Discontinued    INTEGER        NOT NULL
+                     )""")
+    print("se creo la tabla dim_products")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_products ya existe")
+
+"""**dim_customers**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_customers (
+    IdCustomer   VARCHAR (8000) PRIMARY KEY  NOT NULL,
+    CompanyName  VARCHAR (8000),
+    ContactName  VARCHAR (8000),
+    ContactTitle VARCHAR (8000),
+    Address      VARCHAR (8000),
+    City         VARCHAR (8000),
+    Region       VARCHAR (8000),
+    PostalCode   VARCHAR (8000),
+    Country      VARCHAR (8000),
+    Phone        VARCHAR (8000),
+    Fax          VARCHAR (8000) 
+)""")
+    print("se creo la tabla dim_customers")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_customers ya existe")
+
+"""**dim_shippers**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_shipper (
+    IdShipper          INTEGER       PRIMARY KEY AUTOINCREMENT NOT NULL,
+    CompanyName VARCHAR (8000),
+    Phone       VARCHAR (8000) 
+)""")
+    print("se creo la tabla dim_shipper")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_shipper ya existe")
+
+"""**dim_region**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_region (
+    IdRegion          INTEGER       PRIMARY KEY AUTOINCREMENT NOT NULL,
+    RegionDescription VARCHAR (8000) 
+)""")
+    print("se creo la tabla dim_region")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_region ya existe")
+
+"""**dim_employees**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_employees (
+        IdEmployee      INTEGER  PRIMARY KEY AUTOINCREMENT NOT NULL,
+        LastName        VARCHAR (8000),
+        FirstName       VARCHAR (8000),
+        Title           VARCHAR (8000),
+        TitleOfCourtesy VARCHAR (8000),
+        BirthDate       VARCHAR (8000),
+        HireDate        VARCHAR (8000),
+        Address         VARCHAR (8000),
+        City            VARCHAR (8000),
+        Region          VARCHAR (8000),
+        PostalCode      VARCHAR (8000),
+        Country         VARCHAR (8000),
+        HomePhone       VARCHAR (8000),
+        Extension       VARCHAR (8000),
+        Notes           VARCHAR (8000),
+        PhotoPath       VARCHAR (8000) 
+)""")
+    print("se creo la tabla dim_employee")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_employee ya existe")
+
+"""**dim_territory**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_territory (
+    IdTerritory          VARCHAR (8000) PRIMARY KEY NOT NULL,
+    IdEmployee    INTEGER REFERENCES dim_employees (IdEmployee) NOT NULL,
+    IdRegion             INTEGER REFERENCES dim_region (IdRegion) NOT NULL,
+    TerritoryDescription VARCHAR (8000)
+)""")
+    print("se creo la tabla dim_territory")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_territory ya existe")
+
+"""**dim_location**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_location (
+    IdLocation        INTEGER      PRIMARY KEY AUTOINCREMENT NOT NULL,
+    ShipName       VARCHAR (8000),
+    ShipAddress    VARCHAR (8000),
+    ShipCity       VARCHAR (8000),
+    ShipRegion     VARCHAR (8000),
+    ShipPostalCode VARCHAR (8000),
+    ShipCountry    VARCHAR (8000) 
+)""")
+    print("se creo la tabla dim_location")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_location ya existe")
+
+"""**dim_time**"""
+
+try:
+    conexion.execute("""CREATE TABLE dim_time (
+        IdTime INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        Day INTEGER NOT NULL,
+        Month INTEGER NOT NULL,
+        Year INTEGER NOT NULL,
+        Quarter INTEGER NOT NULL,
+        Week INTEGER NOT NULL,
+        WeekDay INTEGER NOT NULL,
+        NameDay NVARCHAR (10) NOT NULL,
+        NameMonth NVARCHAR (15) NOT NULL
+)""")
+    print("se creo la tabla dim_time")                        
+except sqlite3.OperationalError:
+    print("La tabla dim_time ya existe")
+
+"""**Order_products** (**hechos**)"""
+
+try:
+    conexion.execute("""CREATE TABLE Order_products (
+    Id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    IdProduct   INTEGER REFERENCES dim_products (IdProduct) NOT NULL,
+    IdCustomer  VARCHAR (8000) REFERENCES dim_customers (IdCustomer) NOT NULL,
+    IdTime      INTTEGR REFERENCES dim_time (IdTime) NOT NULL,
+    IdLocation  INTEGER REFERENCES dim_location (LocationId) NOT NULL,
+    IdEmployee  INTEGER REFERENCES dim_employees (IdEmployee),
+    IdShipper   INTEGER REFERENCES dim_shipper (IdShipper),
+    UnitPrice DECIMAL        NOT NULL,
+    Quantity  INTEGER        NOT NULL,
+    Discount  DOUBLE         NOT NULL
+);""")
+    print("se creo la tabla Order_products")                        
+except sqlite3.OperationalError:
+    print("La tabla Order_products ya existe")
+
+"""# **Conexión hacia las bases de datos**"""
+
+#Conectar el motor al archivo de la base de datos a usar 
+engine = create_engine('sqlite:///Northwind_large.sqlite')
+engine
+
+#Conectar el motor al archivo de la base de datos a usar 
+engine2 = create_engine('sqlite:///DW_Northwind_multdim2.db')
+engine2
+
+"""# Extract"""
+
+# SQL Expression Language crea metadatos que contienen objetos que definen a una tabla
+metadata = MetaData()
+
+#Este mètodo instancia las tablas que ya 
+#existen en la base de datos, a la que està conectado
+metadata.create_all(engine)
+metadata.create_all(engine2)
+# Revisando esto, podemos ver la estructura de la tabla y los tipos de variables 
+inspector = inspect(engine)
+inspector2 = inspect(engine2)
+
+#datos de db
+inspector.get_columns('Customer')
+inspector.get_columns('Employee')
+inspector.get_columns('Order')
+inspector.get_columns('OrderDetail')
+inspector.get_columns('Product')
+inspector.get_columns('Region')
+inspector.get_columns('Shipper')
+inspector.get_columns('Territory')
+inspector.get_columns('Category')
+inspector.get_columns('Supplier')
+
+"""# Transform"""
+
+import pandas as pd
+
+#dim_category
+df_category = pd.read_sql_query("""SELECT *
+FROM Category;
+ """, con=engine.connect())
+df_category.head()
+
+#dim_supplier
+df_supplier = pd.read_sql_query("""SELECT IdSupplier, CompanyName, ContactName, ContactTitle, Address, City, Region, PostalCode, Country, Phone   
+FROM Supplier;
+ """, con=engine.connect())
+df_supplier.head()
+
+#dim_product
+df_product = pd.read_sql_query("""SELECT IdProduct, IdCategory, IdSupplier,ProductName, QuantityPerUnit, UnitPrice, UnitsInStock, UnitsOnOrder, ReorderLevel, Discontinued
+FROM Product ;
+ """, con=engine.connect())
+df_product.head()
+
+# dim_customer
+df_customer = pd.read_sql_query("""SELECT IdCustomer, CompanyName, ContactName, ContactTitle, Address, City, Region, PostalCode, Country, Phone, Fax
+FROM Customer;
+ """, con=engine.connect())
+df_customer.head()
+
+#dim_shipper
+df_shipper = pd.read_sql_query("""SELECT *
+FROM Shipper;
+ """, con=engine.connect())
+df_shipper.head()
+
+#dim_region
+df_region = pd.read_sql_query("""SELECT *  
+FROM Region;
+ """, con=engine.connect())
+df_region.head()
+
+#dim_territory
+df_territory = pd.read_sql_query("""SELECT Territory.IdTerritory, Employee.IdEmployee, Territory.IdRegion, Territory.TerritoryDescription
+FROM EmployeeTerritory
+     INNER JOIN Territory ON EmployeeTerritory.IdTerritory = Territory.IdTerritory 
+     INNER JOIN Employee ON EmployeeTerritory.IdEmployee  = Employee.IdEmployee 
+     
+;
+ """, con=engine.connect())
+df_territory.head()
+
+# dim_employees
+df_employees=pd.read_sql_query("""SELECT IdEmployee, LastName, FirstName, Title, TitleOfCourtesy, BirthDate, HireDate, Address, City, Region, PostalCode, Country, HomePhone, Extension, Notes, PhotoPath
+FROM Employee;
+ """, con=engine.connect())
+df_employees.head()
+
+#dim_location
+df_location = pd.read_sql_query("""SELECT ShipName, ShipAddress, ShipCity, ShipRegion, ShipPostalCode, ShipCountry
+FROM [Order];
+ """, con=engine.connect())
+df_location.head()
+
+#dim_location
+df_location = pd.read_sql_query("""SELECT ShipName, ShipAddress, ShipCity, ShipRegion, ShipPostalCode, ShipCountry
+FROM [Order];
+ """, con=engine.connect())
+df_location.head()
+
+"""## dim_time"""
+
+from datetime import date
+from datetime import timedelta
+import pandas as pd
+date = pd.date_range('2010-01-01','2015-12-30',freq='D').to_series()
+fecha = pd.to_datetime(date) 
+day = fecha.dt.day
+month = fecha.dt.month
+year = fecha.dt.year
+quarter = fecha.dt.quarter
+week = fecha.dt.week
+weekday = fecha.dt.weekday
+day_name = fecha.dt.day_name()
+month_name = fecha.dt.month_name()
+
+df_time = pd.DataFrame({'Day':list(day),'Month':list(month),'Year':list(year),'Quarter':list(quarter),'Week':list(week),'Weekday':list(weekday),'NameDay':list(day_name),'NameMonth':list(month_name)})
+df_time.head()
+
+"""# Load
+
+## Funciones de carga
+"""
+
+def updateData(name_table,data_db,name_columns):
+	print(name_columns)
+	aux_values='?'
+	aux_data=[]
+	aux_columns=name_columns[0]
+	aux_data.append(list(data_db[name_columns[0]]))
+	entities=[]
+	aux_entities=[]
+	for i in range(len(name_columns)-1):
+		aux_values+=',?'
+		aux_columns+=','+name_columns[i+1]
+		aux_data.append(list(data_db[name_columns[i+1]]))
+	for i in range(len(aux_data[0])):
+		for j in range(len(aux_data)):
+			aux_entities.append(aux_data[j][i])
+		entities.append(aux_entities)
+		aux_entities=[]
+	with engine2.connect() as con:
+		for i in entities:
+			con.execute('INSERT INTO '+name_table+'('+aux_columns+') VALUES('+aux_values+')', i)
+	con.close()
+
+"""# dim_category"""
+
+updateData('dim_category',df_category,list(df_category.columns.values))
+
+"""# dim_supplier"""
+
+updateData('dim_supplier',df_supplier,list(df_supplier.columns.values))
+
+"""## dim_product """
+
+updateData('dim_products',df_product,list(df_product.columns.values))
+
+"""## dim_customer"""
+
+updateData('dim_customers',df_customer,list(df_customer.columns.values))
+
+"""## dim_shipper"""
+
+updateData('dim_shipper',df_shipper,list(df_shipper.columns.values))
+
+"""# dim_region"""
+
+updateData('dim_region',df_region,list(df_region.columns.values))
+
+"""# dim_territory"""
+
+updateData('dim_territory',df_territory,list(df_territory.columns.values))
+
+"""## dim_employees"""
+
+updateData('dim_employees',df_employees,list(df_employees.columns.values))
+
+"""## dim_location"""
+
+updateData('dim_location',df_location,list(df_location.columns.values))
+
+"""# dim_time"""
+
+updateData('dim_time',df_time,list(df_time.columns.values))
+
+"""# Order_products"""
+
+#order_product
+#ColumsAux
+df_AuxProduct = pd.read_sql_query("""SELECT IdProduct
+FROM Product;
+ """, con=engine.connect())
+
+df_AuxProduct.head()
+
+df_AuxCustomer = pd.read_sql_query("""SELECT IdCustomer
+FROM Customer;
+ """, con=engine.connect())
+df_AuxProduct.head()
+
+df_AuxTime = pd.read_sql_query("""SELECT IdTime
+FROM dim_time;
+ """, con=engine2.connect())
+df_AuxTime.head()
+
+df_AuxLocation = pd.read_sql_query("""SELECT IdLocation
+FROM dim_location;
+ """, con=engine2.connect())
+df_AuxLocation.head()
+
+df_AuxShipper = pd.read_sql_query("""SELECT IdShipper
+FROM Shipper;
+ """, con=engine.connect())
+df_AuxShipper.head()
+
+df_final=pd.read_sql_query("""SELECT UnitPrice, Quantity, Discount
+FROM OrderDetail;
+ """, con=engine.connect())
+df_final.head()
+
+"""# Fact_invoice_items"""
+
+columnas=['IdProduct','IdCustomer','IdTime','IdLocation','IdEmployee','IdShipper','UnitPrice','Quantity', 'Discount']
+df = pd.DataFrame(list(zip(df_AuxProduct['IdProduct'],df_AuxCustomer['IdCustomer'],df_AuxTime['IdTime'],df_AuxLocation['IdLocation'],df_employees['IdEmployee'],df_AuxShipper['IdShipper'],
+                           list(df_final['UnitPrice']), list(df_final['Quantity']), list(df_final['Discount']))), columns = columnas)
+updateData('Order_products',df,list(df.columns.values))
